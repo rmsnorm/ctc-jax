@@ -157,7 +157,7 @@ class Mfcc:
         return psd_one_sided, freqs, frame_times
 
     def __call__(self, x: np.array):
-        psd, freqs, frame_times = self._compute_spectrum(x)
+        psd, _, _ = self._compute_spectrum(x)
 
         log_mel_psd = np.log10(psd @ self.mel_filter_bank_matrix.T)
 

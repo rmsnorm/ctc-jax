@@ -1,5 +1,6 @@
 __pycache__/
-bazel-bin/
-bazel-ctc-jax/
-bazel-out/
-bazel-testlogs/
+MODULE.bazel.lock
+bazel-bin
+bazel-ctc-jax
+bazel-out
+bazel-testlogs

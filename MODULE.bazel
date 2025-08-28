@@ -1,3 +1,8 @@
+module(
+    name = "my_project",
+    version = "0.1.0",
+)
+
 bazel_dep(name = "rules_python", version = "1.5.3")
 
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
@@ -9,14 +14,7 @@ pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
     hub_name = "pypi",
     python_version = "3.12",
-    requirements_lock = "//:requirements.txt",
+    requirements_lock = "//:requirements_lock.txt",
 )
 
 use_repo(pip, "pypi")
-
-
-# The Gazelle plugin depends on Gazelle.
-bazel_dep(name = "gazelle", version = "0.33.0", repo_name = "bazel_gazelle")
-
-# Typically rules_python_gazelle_plugin is version matched to rules_python.
-bazel_dep(name = "rules_python_gazelle_plugin", version = "1.5.1")

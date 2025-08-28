@@ -1,5 +1,6 @@
 load("@rules_python//python:py_binary.bzl", "py_binary")
 load("@rules_python//python:py_library.bzl", "py_library")
+load("@rules_python//python:py_test.bzl", "py_test")
 
 py_library(
   name = "mfcc",
@@ -8,4 +9,24 @@ py_library(
       "@pypi//numpy",
       "@pypi//scipy",
   ]
+)
+
+py_library(
+    name = "ctc",
+    srcs = ["ctc.py"],
+    deps = [
+        "@pypi//numpy",
+        "@pypi//scipy"
+    ]
+)
+
+py_test(
+    name = "ctc_test",
+    srcs = ["ctc_test.py"],
+    deps = [
+        ":ctc",
+        "@pypi//numpy",
+        "@pypi//scipy",
+        "@pypi//optax",
+    ]
 )

@@ -2,6 +2,7 @@ load("@rules_python//python:py_binary.bzl", "py_binary")
 load("@rules_python//python:py_library.bzl", "py_library")
 load("@rules_python//python:py_test.bzl", "py_test")
 
+
 py_library(
   name = "mfcc",
   srcs = ["mfcc.py"],
@@ -10,6 +11,7 @@ py_library(
       "@pypi//scipy",
   ]
 )
+
 
 py_library(
     name = "phoneset",
@@ -40,6 +42,7 @@ py_library(
     ]
 )
 
+
 py_library(
     name = "ctc",
     srcs = ["ctc.py"],
@@ -49,6 +52,7 @@ py_library(
     ]
 )
 
+
 py_test(
     name = "ctc_test",
     srcs = ["ctc_test.py"],
@@ -57,5 +61,23 @@ py_test(
         "@pypi//numpy",
         "@pypi//scipy",
         "@pypi//optax",
+    ]
+)
+
+
+py_library(
+    name = "metrics",
+    srcs = ["metrics.py"],
+    deps = [
+        "@pypi//numpy",
+    ]
+)
+
+
+py_test(
+    name = "metrics_test",
+    srcs = ["metrics_test.py"],
+    deps = [
+        ":metrics",
     ]
 )

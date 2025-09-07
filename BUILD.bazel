@@ -32,6 +32,15 @@ py_binary(
 
 
 py_library(
+    name = "lstm",
+    srcs = ["lstm.py"],
+    deps = [
+        "@pypi//jax",
+        "@pypi//flax"
+    ]
+)
+
+py_library(
     name = "ctc",
     srcs = ["ctc.py"],
     deps = [

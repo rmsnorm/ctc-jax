@@ -12,6 +12,26 @@ py_library(
 )
 
 py_library(
+    name = "phoneset",
+    srcs = ["phoneset.py"]
+)
+
+
+py_binary(
+    name = "prepare_timit_dataset",
+    srcs = ["prepare_timit_dataset.py"],
+    deps = [
+        ":mfcc",
+        ":phoneset",
+        "@pypi//numpy",
+        "@pypi//tensorflow",
+        "@pypi//sphfile"
+
+    ]
+)
+
+
+py_library(
     name = "ctc",
     srcs = ["ctc.py"],
     deps = [

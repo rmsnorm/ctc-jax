@@ -2,7 +2,22 @@
 
 This repo implements the [CTC paper](https://www.cs.toronto.edu/~graves/icml_2006.pdf) from 2006 in JAX.
 
-### Run the unit-tests
+### Download the TIMIT dataset.
+
+https://github.com/philipperemy/timit which points to the academictorrents [link](
+https://academictorrents.com/details/34e2b78745138186976cbc27939b1b34d18bd5b3)
+
+### Prepare the TIMIT dataset for training.
+
+`sh prepare_dataset.sh`
+
+You need to change BASE_DIR and OUTPUT_DIR in above script.
+
+### Train Bi-LSTM network with CTC.
+ 
+### Eval the trained network.
+
+### Run the unit-tests.
 
 `bazel test :all`
 

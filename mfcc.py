@@ -1,9 +1,11 @@
 # Utility for computing MFCC features for a wav file
 
-import numpy as np
-import scipy as sp
 import dataclasses
 import enum
+import json
+
+import numpy as np
+import scipy as sp
 
 
 class WindowType(enum.Enum):
@@ -28,6 +30,22 @@ class MfccConfig:
     low_freq_hz: int
     compute_delta: bool
     compute_delta_delta: bool
+
+    @classmethod
+    def from_json(cls, filename):
+        with open(filename, "r") as f:
+            data = json.load(f)
+        return cls(
+            fs=data["fs"],
+            window_ms=data["window_ms"],
+            window_shift_ms=data["window_shift_ms"],
+            window_type=data["window_type"],
+            fft_window_len=data["fft_window_len"],
+            num_mel_filters=data["num_mel_filters"],
+            low_freq_hz=data["low_freq_hz"],
+            compute_delta=data["compute_delta"],
+            compute_delta_delta=data["compute_delta_delta"],
+        )
 
 
 PI = np.pi
@@ -59,7 +77,7 @@ def mel2hz(m):
     return 700.0 * (10 ** (m / 2595.0) - 1)
 
 
-class Mfcc:
+class MfccComputer:
     """Class for computing MFCC."""
 
     def __init__(self, cfg: MfccConfig):

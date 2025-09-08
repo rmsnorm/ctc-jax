@@ -119,7 +119,7 @@ def create_tf_dataset(
         )
 
         feature = {
-            "input_seq": _bytes_feature(padded_feat.tobytes()),
+            "input_seq": _bytes_feature(padded_feat.astype(np.float32).tobytes()),
             "input_paddings": _float_feature(
                 [0.0] * feat_len + [1.0] * (max_feat_len - feat_len)
             ),

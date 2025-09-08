@@ -1,0 +1,11 @@
+{
+    "fs": 16000,
+    "window_ms": 25,
+    "window_shift_ms": 10,
+    "window_type": 0,
+    "fft_window_len": 512,
+    "num_mel_filters": 40,
+    "low_freq_hz": 50,
+    "compute_delta": true,
+    "compute_delta_delta": false
+}

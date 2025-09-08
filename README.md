@@ -14,7 +14,15 @@ https://academictorrents.com/details/34e2b78745138186976cbc27939b1b34d18bd5b3)
 You need to change BASE_DIR and OUTPUT_DIR in above script.
 
 ### Train Bi-LSTM network with CTC.
- 
+
+`sh run_training.sh`
+
+Supply the appropriate args in the above script.
+
+There is some issue with training the BiLSTM right now. Firstly, the inputs
+are pre-padded and simply reversing the inputs will be wrong for the backward
+LSTM. So that needs to be fixed.
+
 ### Eval the trained network.
 
 ### Run the unit-tests.

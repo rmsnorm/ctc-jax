@@ -18,6 +18,12 @@ def label_error(predicted_label_seq, label_seq, blank_id):
     def edit_distance(y1, y2):
         m = len(y1)
         n = len(y2)
+        if m == 0 and n > 0:
+            return n
+        if n == 0 and m > 0:
+            return m
+        if n == 0 and m == 0:
+            return 0
 
         e = np.zeros((m, n), dtype="int")
         e[0, 1:] = np.arange(1, n)

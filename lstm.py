@@ -56,12 +56,9 @@ class LSTM(nnx.Module):
 
 
 class BiLSTM(nnx.Module):
-    def __init__(
-        self, input_dim: int, hidden_dim: int, output_dim: int, rngs: nnx.Rngs
-    ):
+    def __init__(self, input_dim: int, hidden_dim: int, rngs: nnx.Rngs):
         self.fwd_lstm = LSTM(input_dim, hidden_dim, rngs)
         self.rev_lstm = LSTM(input_dim, hidden_dim, rngs)
-        self.output_head = nnx.Linear(2 * hidden_dim, output_dim, rngs=rngs)
 
     def __call__(self, x_btd):
         fwd_h_bth = self.fwd_lstm(x_btd)
@@ -69,5 +66,27 @@ class BiLSTM(nnx.Module):
 
         h_bth = jnp.concatenate((fwd_h_bth, rev_h_bth), axis=-1)
 
+        return h_bth
+
+
+class Network(nnx.Module):
+    def __init__(
+        self,
+        is_bilstm: bool,
+        input_dim: int,
+        hidden_dim: int,
+        output_dim: int,
+        rngs: nnx.Rngs,
+    ):
+        if is_bilstm:
+            self.rnn = BiLSTM(input_dim, hidden_dim, rngs)
+            self.output_head = nnx.Linear(2 * hidden_dim, output_dim, rngs=rngs)
+        else:
+            self.rnn = LSTM(input_dim, hidden_dim, rngs)
+            self.output_head = nnx.Linear(hidden_dim, output_dim, rngs=rngs)
+
+    @nnx.jit
+    def __call__(self, x_btd):
+        h_bth = self.rnn(x_btd)
         logits_btv = self.output_head(h_bth)
         return logits_btv

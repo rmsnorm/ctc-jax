@@ -42,9 +42,9 @@ train_metrics_history = {
 eval_metrics_history = {"test_loss": [], "test_label_error_rate": []}
 
 
-def compute_loss(model: lstm.BiLSTM, input_btd, logit_paddings, label, label_paddings):
+def compute_loss(model: lstm.Network, input_btd, logit_paddings, label, label_paddings):
     """Computes ctc loss."""
-    logits_btv = model(input_btd)
+    logits_btv = model(input_btd, logit_paddings)
     return jnp.mean(
         optax.losses.ctc_loss(
             logits_btv,
@@ -56,9 +56,9 @@ def compute_loss(model: lstm.BiLSTM, input_btd, logit_paddings, label, label_pad
 
 
 def compute_metrics(
-    model: lstm.BiLSTM, input_btd, logit_paddings, label, label_paddings
+    model: lstm.Network, input_btd, logit_paddings, label, label_paddings
 ):
-    logits_btv = model(input_btd)
+    logits_btv = model(input_btd, logit_paddings)
     loss = jnp.mean(
         optax.losses.ctc_loss(
             logits_btv,

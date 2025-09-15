@@ -1,10 +1,10 @@
 {
     "input_dim": 26,
-    "hidden_dim": 50,
+    "hidden_dim": 100,
     "output_dim": 64,
     "batch_size": 1,
     "num_epochs": 3,
     "learning_rate": 1e-4,
     "momentum": 0.9,
-    "is_bilstm": false
+    "is_bilstm": true
 }

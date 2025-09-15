@@ -38,7 +38,8 @@ class LSTM(nnx.Module):
             nnx.initializers.glorot_normal()(rngs.params(), (1, hidden_dim))
         )
 
-    def __call__(self, x_btd):
+    def __call__(self, x_btd, input_paddings):
+        del input_paddings
         b = x_btd.shape[0]
 
         @nnx.scan
@@ -60,13 +61,25 @@ class BiLSTM(nnx.Module):
         self.fwd_lstm = LSTM(input_dim, hidden_dim, rngs)
         self.rev_lstm = LSTM(input_dim, hidden_dim, rngs)
 
-    def __call__(self, x_btd):
-        fwd_h_bth = self.fwd_lstm(x_btd)
-        rev_h_bth = self.rev_lstm(x_btd[:, ::-1, :])[:, ::-1, :]
+    def __call__(self, x_btd, input_paddings):
+        fwd_h_bth = self.fwd_lstm(x_btd, input_paddings)
+        lengths_b = jnp.sum(input_paddings == 0.0, axis=-1).astype(jnp.int32)[:, None]
+        flipped_x_btd = self._flip_input(x_btd, lengths_b)
+        rev_h_bth = self.rev_lstm(flipped_x_btd, input_paddings)
+        rev_h_bth = self._flip_input(rev_h_bth, lengths_b)
 
         h_bth = jnp.concatenate((fwd_h_bth, rev_h_bth), axis=-1)
 
         return h_bth
+
+    def _flip_input(self, x_btd, lengths_b):
+        b, t, d = x_btd.shape
+        indices = jnp.tile(jnp.arange(t)[None, :], (b, 1))
+        reversed_indices = lengths_b - 1 - indices
+        valid_mask = indices < lengths_b
+        final_indices = jnp.where(valid_mask, reversed_indices, indices)
+        batch_idx = jnp.arange(b)[:, None]
+        return x_btd[batch_idx, final_indices]
 
 
 class Network(nnx.Module):
@@ -86,7 +99,7 @@ class Network(nnx.Module):
             self.output_head = nnx.Linear(hidden_dim, output_dim, rngs=rngs)
 
     @nnx.jit
-    def __call__(self, x_btd):
-        h_bth = self.rnn(x_btd)
+    def __call__(self, x_btd, input_paddings):
+        h_bth = self.rnn(x_btd, input_paddings)
         logits_btv = self.output_head(h_bth)
         return logits_btv

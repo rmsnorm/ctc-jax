@@ -26,6 +26,8 @@ class DataLoader:
             .prefetch(tf.data.AUTOTUNE)
         )
 
+        self.iterator = iter(self.dataset)
+
     def _parse_example_fn(self, example):
         """Parse a single TFRecord example."""
         feature_description = {
@@ -48,5 +50,4 @@ class DataLoader:
         }
 
     def get_batch(self):
-        for batch in self.dataset:
-            return batch
+        return next(self.iterator)

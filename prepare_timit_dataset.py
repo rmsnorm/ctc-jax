@@ -11,6 +11,7 @@ import numpy as np
 import phoneset
 import sphfile
 import tensorflow as tf
+import librosa
 
 parser = argparse.ArgumentParser(
     prog="TimitBuilder",
@@ -26,7 +27,9 @@ parser.add_argument(
 parser.add_argument(
     "--mfcc_config", help="Json file containing the MFCC config", type=str
 )
-parser.add_argument("--is_train", help="Set to true if computing for train.", type=bool)
+parser.add_argument(
+    "--is_train", help="Set to true if computing for train.", type=bool, default=False
+)
 parser.add_argument(
     "--train_stats_file",
     help="if is_train, will compute feature statistics. else, will load precomputed stats",
@@ -97,6 +100,7 @@ def create_tf_dataset(
     train_stats_file: str,
     add_gaussian_noise: bool,
 ):
+    print("is_train", is_train)
     max_feat_len = 0
     max_phn_len = 0
     path_keys = [x.strip(".WAV") for x in wav_files]
@@ -108,7 +112,32 @@ def create_tf_dataset(
         phn_path = path_key + ".PHN"
 
         sf = sphfile.SPHFile(wav_path)
-        feat = mfcc_computer(sf.content)
+        y = sf.content.astype(np.float32)
+        y = y / y.max()
+        is_tune = np.random.uniform(0, 1, size=1) <= 0.05
+        if is_train:
+            if ~is_tune:
+                y += np.random.normal(scale=0.6, size=y.shape)
+
+        fs = 16000
+        # 10ms (window), 5ms (hop)
+        feat = librosa.feature.mfcc(
+            y=y,
+            sr=fs,
+            n_mfcc=13,
+            n_fft=512,
+            hop_length=80,
+            win_length=160,
+            n_mels=26,
+            window="hamming",
+        ).T
+
+        feat_delta = (feat[2:] - feat[:-2]) / 2.0
+        feat = np.stack((feat[2:], feat_delta), axis=-1).reshape(
+            feat_delta.shape[0], 26
+        )
+
+        # feat = mfcc_computer(y)
         feat_len = feat.shape[0]
         max_feat_len = max(max_feat_len, feat_len)
 
@@ -121,6 +150,7 @@ def create_tf_dataset(
             "feat_len": feat_len,
             "label_seq": label_seq,
             "label_len": label_len,
+            "is_tuning": is_tune,
         }
 
     if is_train:
@@ -148,11 +178,14 @@ def create_tf_dataset(
 
     for path_key in path_keys:
         feat_normed = (dataset[path_key]["feat"] - feats_mu) / feats_std
-        if is_train and add_gaussian_noise:
-            feat_normed += np.random.normal(scale=0.6, size=feat_normed.shape)
         dataset[path_key]["feat_normed"] = feat_normed
 
     writer = tf.io.TFRecordWriter(os.path.join(out_dir, "data.tfrecord"))
+    writer_tuning = None
+    if is_train:
+        writer_tuning = tf.io.TFRecordWriter(
+            os.path.join(out_dir, "data_tuning.tfrecord")
+        )
 
     for i, path_key in enumerate(path_keys):
         feat_len = dataset[path_key]["feat_len"]
@@ -176,7 +209,11 @@ def create_tf_dataset(
         tf_example = tf.train.Example(
             features=tf.train.Features(feature=feature)
         ).SerializeToString()
-        writer.write(tf_example)
+        is_tune = dataset[path_key]["is_tuning"]
+        if is_train and is_tune:
+            writer_tuning.write(tf_example)
+        else:
+            writer.write(tf_example)
         if i % 100 == 0:
             print(f"Created tf_examples for {i} files")
 

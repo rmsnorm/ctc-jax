@@ -140,11 +140,6 @@ class MfccComputer:
         return np.array(filter_bank_coeff)
 
     def _compute_spectrum(self, x: np.array):
-        if x.dtype == "int16":
-            x = x.astype(np.float32) / 2 ** (16 - 1)
-        elif x.dtype == "int8":
-            x = x.astype(np.float32) / 2 ** (8 - 1)
-
         # pre-emphasis
         x = x[1:] - 0.97 * x[:-1]
 

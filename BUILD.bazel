@@ -12,6 +12,7 @@ py_binary(
         "@pypi//numpy",
         "@pypi//tensorflow",
         "@pypi//sphfile",
+        "@pypi//librosa"
     ]
 )
 
@@ -106,6 +107,7 @@ py_binary(
         ":metrics",
         ":data_loader",
         ":decode",
+        ":phoneset",
         "@pypi//flax",
         "@pypi//jax",
         "@pypi//optax",

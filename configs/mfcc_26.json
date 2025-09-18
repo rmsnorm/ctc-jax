@@ -1,7 +1,7 @@
 {
     "fs": 16000,
-    "window_ms": 25,
-    "window_shift_ms": 10,
+    "window_ms": 10,
+    "window_shift_ms": 5,
     "window_type": 0,
     "fft_window_len": 512,
     "num_mel_filters": 40,

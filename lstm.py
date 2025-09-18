@@ -10,6 +10,7 @@ class LSTMCell(nnx.Module):
             kernel_shape=(H, 4 * hidden_dim),
             bias_shape=4 * hidden_dim,
             param_dtype=jnp.float32,
+            kernel_init=nnx.initializers.uniform(0.2),
             rngs=rngs,
         )
 

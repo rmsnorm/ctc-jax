@@ -17,5 +17,4 @@ bazel run :prepare_timit_dataset -- \
 --base_dir=${BASE_DIR} \
 --output_dir=${TEST_OUT_DIR} \
 --mfcc_config=/home/apoorv/Projects/ctc-jax/configs/mfcc_26.json \
---is_train=false \
 --train_stats_file=${OUT_DIR}/feats_stats.pkl

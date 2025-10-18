@@ -17,13 +17,15 @@ You need to change BASE_DIR and OUTPUT_DIR in above script.
 
 `sh run_training.sh`
 
-Supply the appropriate args in the above script.
+Supply the appropriate args in the above script. It trains to 46% label error rate
+on the reduced phone set. Reduced phone set uses 42 labels (41 phones + 1 blank label).
+I couldn't quite get it down to the 24% label error rate as claimed in Alex Graves'
+2nd paper ([Phoneme recognition in TIMIT with BiLSTM-CTC](https://arxiv.org/abs/0804.3269)).
 
-There is some issue with training the BiLSTM right now. Firstly, the inputs
-are pre-padded and simply reversing the inputs will be wrong for the backward
-LSTM. So that needs to be fixed.
-
-### Eval the trained network.
+My results should be reproducible however. I spent a looong time on this (probably 100+ hrs)
+and don't have the patience to improve it at the moment. I'm not quite sure why I
+can't reproduce the results. If you are looking at this code and find something,
+please feel free to raise a pull request !
 
 ### Run the unit-tests.
 

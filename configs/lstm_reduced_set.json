@@ -1,0 +1,15 @@
+{
+    "input_dim": 39,
+    "hidden_dim": 100,
+    "output_dim": 42,
+    "batch_size": 128,
+    "num_epochs": 100,
+    "is_bilstm": true,
+    "peephole_connection": true,
+    "l2_reg": 0.1,
+    "lr_init_value": 1e-5,
+    "lr_peak_value": 1e-3,
+    "lr_warmup_steps": 10,
+    "momentum": 0.9,
+    "grad_clip": 100.0
+}

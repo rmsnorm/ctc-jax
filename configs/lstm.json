@@ -1,11 +1,14 @@
 {
-    "input_dim": 26,
+    "input_dim": 39,
     "hidden_dim": 100,
-    "output_dim": 65,
-    "batch_size": 1,
-    "num_epochs": 3,
-    "learning_rate": 1e-3,
-    "momentum": 0.9,
+    "output_dim": 62,
+    "batch_size": 8,
+    "num_epochs": 100,
     "is_bilstm": true,
-    "l2_reg": 0.0
+    "peephole_connection": true,
+    "l2_reg": 0.1,
+    "lr_init_value": 1e-6,
+    "lr_peak_value": 1e-4,
+    "lr_warmup_steps": 100,
+    "momentum": 0.9
 }

@@ -7,23 +7,12 @@ py_binary(
     name = "prepare_timit_dataset",
     srcs = ["prepare_timit_dataset.py"],
     deps = [
-        ":mfcc",
         ":phoneset",
         "@pypi//numpy",
         "@pypi//tensorflow",
         "@pypi//sphfile",
         "@pypi//librosa"
     ]
-)
-
-
-py_library(
-  name = "mfcc",
-  srcs = ["mfcc.py"],
-  deps = [
-      "@pypi//numpy",
-      "@pypi//scipy",
-  ]
 )
 
 

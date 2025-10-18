@@ -10,7 +10,8 @@ class LSTMCell(nnx.Module):
             kernel_shape=(H, 4 * hidden_dim),
             bias_shape=4 * hidden_dim,
             param_dtype=jnp.float32,
-            kernel_init=nnx.initializers.uniform(0.2),
+            kernel_init=nnx.initializers.truncated_normal(lower=-0.1, upper=0.1),
+            bias_init=nnx.initializers.truncated_normal(lower=-0.1, upper=0.1),
             rngs=rngs,
         )
 
@@ -29,14 +30,68 @@ class LSTMCell(nnx.Module):
         return state_bh, cell_bh
 
 
+class PeepholeLSTMCell(nnx.Module):
+    def __init__(self, input_dim: int, hidden_dim: int, rngs: nnx.Rngs):
+        H = 2 * hidden_dim + input_dim
+        self.hidden_dim = hidden_dim
+        self.input_dim = input_dim
+        self.gate = nnx.Einsum(
+            "bH, Hh -> bh",
+            kernel_shape=(H, 3 * hidden_dim),
+            bias_shape=3 * hidden_dim,
+            param_dtype=jnp.float32,
+            kernel_init=nnx.initializers.truncated_normal(lower=-0.1, upper=0.1),
+            bias_init=nnx.initializers.truncated_normal(lower=-0.1, upper=0.1),
+            rngs=rngs,
+        )
+        self.cell_gate = nnx.Einsum(
+            "bH, Hh -> bh",
+            kernel_shape=(hidden_dim + input_dim, hidden_dim),
+            bias_shape=hidden_dim,
+            param_dtype=jnp.float32,
+            kernel_init=nnx.initializers.truncated_normal(lower=-0.1, upper=0.1),
+            bias_init=nnx.initializers.truncated_normal(lower=-0.1, upper=0.1),
+            rngs=rngs,
+        )
+        self.ln_f = nnx.LayerNorm(hidden_dim, rngs=rngs)
+        self.ln_i = nnx.LayerNorm(hidden_dim, rngs=rngs)
+        self.ln_o = nnx.LayerNorm(hidden_dim, rngs=rngs)
+        self.ln_g = nnx.LayerNorm(hidden_dim, rngs=rngs)
+
+    def __call__(self, x_bd, h_bh, c_bh):
+        x_bHc = jnp.column_stack([x_bd, h_bh, c_bh])
+        gate_out = self.gate(x_bHc)
+
+        f, i, o = jnp.split(gate_out, 3, axis=-1)
+        f, i, o = self.ln_f(f), self.ln_i(i), self.ln_o(o)
+        forget_gate = nnx.sigmoid(f)
+        input_gate = nnx.sigmoid(i)
+        output_gate = nnx.sigmoid(o)
+
+        cell_gate = nnx.tanh(
+            self.ln_g(self.cell_gate(x_bHc[:, : self.hidden_dim + self.input_dim]))
+        )
+
+        cell_bh = forget_gate * c_bh + input_gate * cell_gate
+        state_bh = output_gate * nnx.tanh(cell_bh)
+        return state_bh, cell_bh
+
+
 class LSTM(nnx.Module):
-    def __init__(self, input_dim, hidden_dim: int, rngs: nnx.Rngs):
+    def __init__(
+        self, input_dim, hidden_dim: int, peephole_connection: bool, rngs: nnx.Rngs
+    ):
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
 
-        self.cell = LSTMCell(input_dim, hidden_dim, rngs)
+        if peephole_connection:
+            self.cell = PeepholeLSTMCell(input_dim, hidden_dim, rngs)
+        else:
+            self.cell = LSTMCell(input_dim, hidden_dim, rngs)
         self.h_init = nnx.Param(
-            nnx.initializers.glorot_normal()(rngs.params(), (1, hidden_dim))
+            nnx.initializers.truncated_normal(lower=-0.1, upper=0.1)(
+                rngs.params(), (1, hidden_dim)
+            )
         )
 
     def __call__(self, x_btd, input_paddings):
@@ -58,9 +113,11 @@ class LSTM(nnx.Module):
 
 
 class BiLSTM(nnx.Module):
-    def __init__(self, input_dim: int, hidden_dim: int, rngs: nnx.Rngs):
-        self.fwd_lstm = LSTM(input_dim, hidden_dim, rngs)
-        self.rev_lstm = LSTM(input_dim, hidden_dim, rngs)
+    def __init__(
+        self, input_dim: int, hidden_dim: int, peephole_connection, rngs: nnx.Rngs
+    ):
+        self.fwd_lstm = LSTM(input_dim, hidden_dim, peephole_connection, rngs)
+        self.rev_lstm = LSTM(input_dim, hidden_dim, peephole_connection, rngs)
 
     def __call__(self, x_btd, input_paddings):
         fwd_h_bth = self.fwd_lstm(x_btd, input_paddings)
@@ -90,14 +147,27 @@ class Network(nnx.Module):
         input_dim: int,
         hidden_dim: int,
         output_dim: int,
+        peephole_connection: bool,
         rngs: nnx.Rngs,
     ):
         if is_bilstm:
-            self.rnn = BiLSTM(input_dim, hidden_dim, rngs)
-            self.output_head = nnx.Linear(2 * hidden_dim, output_dim, rngs=rngs)
+            self.rnn = BiLSTM(input_dim, hidden_dim, peephole_connection, rngs)
+            self.output_head = nnx.Linear(
+                2 * hidden_dim,
+                output_dim,
+                kernel_init=nnx.initializers.truncated_normal(lower=-0.1, upper=0.1),
+                bias_init=nnx.initializers.truncated_normal(lower=-0.1, upper=0.1),
+                rngs=rngs,
+            )
         else:
-            self.rnn = LSTM(input_dim, hidden_dim, rngs)
-            self.output_head = nnx.Linear(hidden_dim, output_dim, rngs=rngs)
+            self.rnn = LSTM(input_dim, hidden_dim, peephole_connection, rngs)
+            self.output_head = nnx.Linear(
+                hidden_dim,
+                output_dim,
+                kernel_init=nnx.initializers.truncated_normal(lower=-0.1, upper=0.1),
+                bias_init=nnx.initializers.truncated_normal(lower=-0.1, upper=0.1),
+                rngs=rngs,
+            )
 
     @nnx.jit
     def __call__(self, x_btd, input_paddings):

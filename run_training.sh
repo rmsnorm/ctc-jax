@@ -8,5 +8,6 @@ TEST_FILE="/home/apoorv/Projects/datasets/timit/TIMIT/train_processed/data_tunin
 bazel run :train_bilstm -- \
 --train_tfr=${TRAIN_FILE} \
 --tune_tfr=${TEST_FILE} \
---train_config=/home/apoorv/Projects/ctc-jax/configs/lstm.json \
---wandb_key=${WANDB_KEY}
+--train_config=/home/apoorv/Projects/ctc-jax/configs/lstm_reduced_set.json \
+--wandb_key=${WANDB_KEY} \
+--checkpoint_dir=/home/apoorv/Projects/ctc-checkpoints/

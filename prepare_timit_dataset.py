@@ -4,14 +4,14 @@ import argparse
 import glob
 import os
 import pickle
-from typing import Sequence
+from typing import Sequence, Any
 
-import mfcc
 import numpy as np
 import phoneset
 import sphfile
 import tensorflow as tf
 import librosa
+import json
 
 parser = argparse.ArgumentParser(
     prog="TimitBuilder",
@@ -40,21 +40,41 @@ parser.add_argument(
     help="if is_train, will add gaussian noise with std dev 0.6.",
     type=bool,
 )
+parser.add_argument(
+    "--use_reduced_phone_set",
+    help="Whether to use 41 phone reduced set",
+    type=bool,
+)
 
 
 # reserve 0 for CTC blank symbol.
 PHN_2_LABEL = dict(zip(phoneset.PHONE_SET, range(1, len(phoneset.PHONE_SET) + 1)))
 LABEL_2_PHN = dict([(v, k) for k, v in PHN_2_LABEL.items()])
 
+REDUCED_SET_PHN_2_LABEL = dict(
+    zip(phoneset.FINAL_SYMBOL_MAP.keys(), range(1, len(phoneset.FINAL_SYMBOL_MAP) + 1))
+)
+REDUCED_SET_LABEL_2_PHN = dict([(v, k) for k, v in REDUCED_SET_PHN_2_LABEL.items()])
 
-def parse_phn_file(phn_file_path) -> Sequence[int]:
+
+def parse_phn_file(phn_file_path, use_reduced_set: bool) -> Sequence[int]:
     """Extract phoneme sequence given the phn file"""
     phn_seq = []
     with open(phn_file_path, "r", encoding="ascii") as f:
         lines = f.read().splitlines()
         for line in lines:
             _, _, phoneme = line.split(" ")
-            phn_seq.append(PHN_2_LABEL[phoneme])
+            if use_reduced_set:
+                if phoneme in phoneset.INVERTED_FINAL_SYMBOL_MAP:
+                    mapped_phoneme = phoneset.INVERTED_FINAL_SYMBOL_MAP[phoneme]
+                    lbl = REDUCED_SET_PHN_2_LABEL[mapped_phoneme]
+                    if len(phn_seq) > 0 and lbl != phn_seq[-1]:
+                        phn_seq.append(lbl)
+                    elif len(phn_seq) == 0:
+                        phn_seq.append(lbl)
+            else:
+                if phoneme in PHN_2_LABEL:
+                    phn_seq.append(PHN_2_LABEL[phoneme])
 
     return phn_seq
 
@@ -95,10 +115,11 @@ def _int64_feature(value):
 def create_tf_dataset(
     wav_files: Sequence[str],
     out_dir: str,
-    mfcc_computer: mfcc.MfccComputer,
     is_train: bool,
     train_stats_file: str,
     add_gaussian_noise: bool,
+    mfcc_config: dict[Any],
+    use_reduced_phone_set: bool,
 ):
     print("is_train", is_train)
     max_feat_len = 0
@@ -115,33 +136,39 @@ def create_tf_dataset(
         y = sf.content.astype(np.float32)
         y = y / y.max()
         is_tune = np.random.uniform(0, 1, size=1) <= 0.05
-        if is_train:
-            if ~is_tune:
-                y += np.random.normal(scale=0.6, size=y.shape)
+        # if is_train:
+        # if ~is_tune and add_gaussian_noise:
+        # y += np.random.normal(scale=0.6, size=y.shape)
 
         fs = 16000
-        # 10ms (window), 5ms (hop)
+        n_mfcc = 13
         feat = librosa.feature.mfcc(
             y=y,
             sr=fs,
-            n_mfcc=13,
-            n_fft=512,
-            hop_length=80,
-            win_length=160,
-            n_mels=26,
-            window="hamming",
-        ).T
-
-        feat_delta = (feat[2:] - feat[:-2]) / 2.0
-        feat = np.stack((feat[2:], feat_delta), axis=-1).reshape(
-            feat_delta.shape[0], 26
+            n_mfcc=n_mfcc,
+            n_fft=mfcc_config["fft_window_len"],
+            hop_length=(fs * mfcc_config["window_shift_ms"]) // 1000,
+            win_length=(fs * mfcc_config["window_ms"]) // 1000,
+            n_mels=mfcc_config["num_mel_filters"],
+            window="hamming" if mfcc_config["window_type"] == 0 else "hann",
         )
 
-        # feat = mfcc_computer(y)
+        if mfcc_config["compute_delta"]:
+            feat_delta = librosa.feature.delta(
+                feat,
+                order=1,
+            )
+
+            if mfcc_config["compute_delta_delta"]:
+                feat_delta_delta = librosa.feature.delta(feat, order=2)
+                feat = np.vstack((feat, feat_delta, feat_delta_delta)).T
+            else:
+                feat = np.vstack((feat, feat_delta)).T
+
         feat_len = feat.shape[0]
         max_feat_len = max(max_feat_len, feat_len)
 
-        label_seq = parse_phn_file(phn_path)
+        label_seq = parse_phn_file(phn_path, use_reduced_phone_set)
         label_len = len(label_seq)
         max_phn_len = max(max_phn_len, label_len)
 
@@ -220,8 +247,9 @@ def create_tf_dataset(
 
 def main():
     args = parser.parse_args()
-    mfcc_config = mfcc.MfccConfig.from_json(args.mfcc_config)
-    mfcc_computer = mfcc.MfccComputer(mfcc_config)
+    with open(args.mfcc_config, "r") as f:
+        mfcc_config = json.load(f)
+
     base_dir = args.base_dir
     output_dir = args.output_dir
 
@@ -234,10 +262,11 @@ def main():
     create_tf_dataset(
         wav_files,
         args.output_dir,
-        mfcc_computer,
         args.is_train,
         args.train_stats_file,
         args.add_gaussian_noise,
+        mfcc_config,
+        args.use_reduced_phone_set,
     )
 
 

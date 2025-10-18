@@ -4,11 +4,11 @@ import numpy as np
 
 
 def collapse_repetitions(predicted_label_seq, blank_id):
-    collapsed_seq = []
-    for i, lbl in enumerate(predicted_label_seq):
-        if lbl in [blank_id, predicted_label_seq[i - 1]]:
-            continue
-        collapsed_seq.append(lbl)
+    collapsed_seq = [predicted_label_seq[0]]
+    for lbl in predicted_label_seq[1:]:
+        if lbl != collapsed_seq[-1]:
+            collapsed_seq.append(lbl)
+    collapsed_seq = [lbl for lbl in collapsed_seq if lbl != blank_id]
     return collapsed_seq
 
 

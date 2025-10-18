@@ -7,5 +7,5 @@
     "num_mel_filters": 40,
     "low_freq_hz": 50,
     "compute_delta": true,
-    "compute_delta_delta": false
+    "compute_delta_delta": true
 }
